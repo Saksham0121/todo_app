@@ -88,8 +88,19 @@ export default function Particles({
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1;
   const rafID = useRef(null);
   const resizeTimeout = useRef(null);
+  const currentColor = useRef(color);
 
   useEffect(() => {
+    // Update the current color when the prop changes
+    if (currentColor.current !== color) {
+      currentColor.current = color;
+      // Redraw particles with new color
+      if (circles.current.length > 0) {
+        clearContext();
+        animate();
+      }
+    }
+
     if (canvasRef.current) {
       context.current = canvasRef.current.getContext("2d");
     }
@@ -116,7 +127,7 @@ export default function Particles({
       }
       window.removeEventListener("resize", handleResize);
     };
-  }, [color]);
+  }, [color, quantity, size, staticity, ease]);
 
   useEffect(() => {
     onMouseMove();
@@ -186,11 +197,11 @@ export default function Particles({
     };
   };
 
-  const rgb = hexToRgb(color);
-
   const drawCircle = (circle, update = false) => {
     if (context.current) {
       const { x, y, translateX, translateY, size, alpha } = circle;
+      const rgb = hexToRgb(color); // Use the current color prop
+      
       context.current.translate(translateX, translateY);
       context.current.beginPath();
       context.current.arc(x, y, size, 0, 2 * Math.PI);
@@ -217,6 +228,12 @@ export default function Particles({
 
   const drawParticles = () => {
     clearContext();
+    
+    // Clear existing circles if we're redrawing
+    if (circles.current.length > 0) {
+      circles.current = [];
+    }
+    
     for (let i = 0; i < quantity; i++) {
       const circle = circleParams();
       drawCircle(circle);
@@ -237,6 +254,7 @@ export default function Particles({
 
   const animate = () => {
     clearContext();
+    
     circles.current.forEach((circle, i) => {
       // Handle the alpha value
       const edge = [
