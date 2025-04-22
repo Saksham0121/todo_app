@@ -216,9 +216,9 @@ export default function TodoApp() {
       {/* Particles component positioned fixed behind everything */}
       <Particles 
         className="fixed inset-10 -z-10" 
-        quantity={150}
-        color={darkMode ? "#ffffff" : "#4f46e5"}
-        size={0.6}
+        quantity={160}
+        color={darkMode ? "bg-gray-800" : "#4f46e5"}
+        size={1}
         staticity={40}
       />
       

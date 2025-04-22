@@ -34,6 +34,57 @@ function useMousePosition() {
   return mousePosition;
 }
 
+// Theme detection hook
+function useThemeDetection() {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Check initial theme
+    if (typeof window !== "undefined") {
+      // Check for system preference
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      // Check for theme class on html/body if you're using a theme library
+      const hasClassDark = document.documentElement.classList.contains("dark") || 
+                          document.body.classList.contains("dark");
+      
+      setIsDarkMode(prefersDark || hasClassDark);
+    }
+
+    // Set up listeners for theme changes
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e) => {
+      setIsDarkMode(e.matches);
+    };
+
+    // Listener for system preference changes
+    mediaQuery.addEventListener("change", handleChange);
+
+    // Additional mutation observer to detect class changes if using theme toggling
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.attributeName === "class" &&
+          (mutation.target === document.documentElement || mutation.target === document.body)
+        ) {
+          const isDark = document.documentElement.classList.contains("dark") || 
+                        document.body.classList.contains("dark");
+          setIsDarkMode(isDark);
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    observer.observe(document.body, { attributes: true });
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+      observer.disconnect();
+    };
+  }, []);
+
+  return isDarkMode;
+}
+
 // Convert hex color to RGB array
 function hexToRgb(hex) {
   hex = hex.replace("#", "");
@@ -62,7 +113,8 @@ function hexToRgb(hex) {
  * @param {number} [props.ease=50] - Ease factor for particle movement
  * @param {number} [props.size=0.4] - Base size of particles
  * @param {boolean} [props.refresh=false] - Flag to refresh/redraw particles
- * @param {string} [props.color="#ffffff"] - Particle color in hex
+ * @param {string} [props.lightModeColor="#000000"] - Particle color in hex for light mode
+ * @param {string} [props.darkModeColor="#ffffff"] - Particle color in hex for dark mode
  * @param {number} [props.vx=0] - Velocity X component
  * @param {number} [props.vy=0] - Velocity Y component
  */
@@ -73,7 +125,8 @@ export default function Particles({
   ease = 50,
   size = 0.4,
   refresh = false,
-  color = "#ffffff",
+  lightModeColor = "#000000", // Black particles for light mode
+  darkModeColor = "#ffffff", // White particles for dark mode
   vx = 0,
   vy = 0,
   ...props
@@ -83,24 +136,26 @@ export default function Particles({
   const context = useRef(null);
   const circles = useRef([]);
   const mousePosition = useMousePosition();
+  const isDarkMode = useThemeDetection();
   const mouse = useRef({ x: 0, y: 0 });
   const canvasSize = useRef({ w: 0, h: 0 });
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1;
   const rafID = useRef(null);
   const resizeTimeout = useRef(null);
-  const currentColor = useRef(color);
+  const currentColor = useRef(isDarkMode ? darkModeColor : lightModeColor);
 
   useEffect(() => {
-    // Update the current color when the prop changes
-    if (currentColor.current !== color) {
-      currentColor.current = color;
-      // Redraw particles with new color
-      if (circles.current.length > 0) {
-        clearContext();
-        animate();
-      }
+    // Update color when theme changes
+    currentColor.current = isDarkMode ? darkModeColor : lightModeColor;
+    
+    // Redraw particles with new color if already initialized
+    if (circles.current.length > 0) {
+      clearContext();
+      animate();
     }
+  }, [isDarkMode, darkModeColor, lightModeColor]);
 
+  useEffect(() => {
     if (canvasRef.current) {
       context.current = canvasRef.current.getContext("2d");
     }
@@ -127,7 +182,7 @@ export default function Particles({
       }
       window.removeEventListener("resize", handleResize);
     };
-  }, [color, quantity, size, staticity, ease]);
+  }, [quantity, size, staticity, ease]);
 
   useEffect(() => {
     onMouseMove();
@@ -200,7 +255,8 @@ export default function Particles({
   const drawCircle = (circle, update = false) => {
     if (context.current) {
       const { x, y, translateX, translateY, size, alpha } = circle;
-      const rgb = hexToRgb(color); // Use the current color prop
+      const color = isDarkMode ? darkModeColor : lightModeColor;
+      const rgb = hexToRgb(color);
       
       context.current.translate(translateX, translateY);
       context.current.beginPath();
@@ -310,7 +366,13 @@ export default function Particles({
       aria-hidden="true"
       {...props}
     >
-      <canvas ref={canvasRef} className="w-full h-full" />
+      <canvas 
+        ref={canvasRef} 
+        className={cn(
+          "w-full h-full",
+          isDarkMode ? "bg-black" : "bg-white"
+        )}
+      />
     </div>
   );
 }
