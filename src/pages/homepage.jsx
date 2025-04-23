@@ -50,7 +50,6 @@ export default function TodoApp() {
       id: Date.now(),
       text: newTodo,
       completed: false,
-      important: false,
       recurring: newTodoRecurring,
       dueDate: newTodoDueDate || null
     };
@@ -76,14 +75,6 @@ export default function TodoApp() {
     );
   };
 
-  // Toggle todo importance
-  const toggleImportant = (id) => {
-    setTodos(
-      todos.map(todo => 
-        todo.id === id ? { ...todo, important: !todo.important } : todo
-      )
-    );
-  };
 
   // Toggle todo recurring status
   const toggleRecurring = (id) => {
@@ -170,7 +161,6 @@ export default function TodoApp() {
   const filteredTodos = todos.filter(todo => {
     if (filter === 'active') return !todo.completed;
     if (filter === 'completed') return todo.completed;
-    if (filter === 'important') return todo.important;
     if (filter === 'today') {
       const today = new Date().toISOString().split('T')[0];
       return todo.dueDate === today || todo.recurring;
@@ -187,10 +177,6 @@ export default function TodoApp() {
     // First by overdue
     if (isOverdue(a.dueDate) && !isOverdue(b.dueDate)) return -1;
     if (!isOverdue(a.dueDate) && isOverdue(b.dueDate)) return 1;
-    
-    // Then by importance
-    if (a.important && !b.important) return -1;
-    if (!a.important && b.important) return 1;
     
     // Then by due date
     if (a.dueDate && !b.dueDate) return -1;
@@ -215,16 +201,18 @@ export default function TodoApp() {
     <div className={`max-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Particles component positioned fixed behind everything */}
       <Particles 
-        className="fixed inset-10 -z-10" 
+        className="fixed inset-0 -z-10" 
         quantity={160}
-        color={darkMode ? "bg-gray-800" : "#4f46e5"}
-        size={1}
         staticity={40}
+        darkMode={darkMode}
+        size={1}
+        ease={50}
       />
       
+      <div className="container mx-auto px-4 py-8">
         <div className={`p-6 rounded-lg shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex justify-between items-center mb-6">
-            <h1 className={`text-3xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+            <h1 className={`text-4xl font-bold mx-auto ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
               Task Master
             </h1>
             <button 
@@ -354,16 +342,6 @@ export default function TodoApp() {
                 Upcoming
               </button>
               <button 
-                onClick={() => setFilter('important')} 
-                className={`px-3 py-2 rounded-md flex-1 whitespace-nowrap transition-colors ${
-                  filter === 'important' 
-                    ? (darkMode ? 'bg-gray-600 text-white shadow-sm' : 'bg-white shadow-sm') 
-                    : (darkMode ? 'hover:bg-gray-600 text-gray-300' : 'hover:bg-gray-200 text-gray-600')
-                }`}
-              >
-                Important
-              </button>
-              <button 
                 onClick={() => setFilter('completed')} 
                 className={`px-3 py-2 rounded-md flex-1 whitespace-nowrap transition-colors ${
                   filter === 'completed' 
@@ -451,16 +429,6 @@ export default function TodoApp() {
                       
                       <div className="flex space-x-2">
                         <button 
-                          onClick={() => toggleImportant(todo.id)}
-                          className={`p-1 rounded-full ${
-                            todo.important 
-                              ? 'text-yellow-400 hover:text-yellow-500' 
-                              : (darkMode ? 'text-gray-400 hover:text-yellow-400' : 'text-gray-400 hover:text-yellow-500')
-                          }`}
-                        >
-                          {todo.important ? <Star size={18} /> : <StarOff size={18} />}
-                        </button>
-                        <button 
                           onClick={() => toggleRecurring(todo.id)}
                           className={`p-1 rounded-full ${
                             todo.recurring 
@@ -531,6 +499,7 @@ export default function TodoApp() {
             )}
           </div>
         </div>
+      </div>
     </div>
   );
 }

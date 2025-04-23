@@ -34,75 +34,6 @@ function useMousePosition() {
   return mousePosition;
 }
 
-// Theme detection hook
-function useThemeDetection() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  useEffect(() => {
-    // Check initial theme
-    if (typeof window !== "undefined") {
-      // Check for system preference
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      // Check for theme class on html/body if you're using a theme library
-      const hasClassDark = document.documentElement.classList.contains("dark") || 
-                          document.body.classList.contains("dark");
-      
-      setIsDarkMode(prefersDark || hasClassDark);
-    }
-
-    // Set up listeners for theme changes
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = (e) => {
-      setIsDarkMode(e.matches);
-    };
-
-    // Listener for system preference changes
-    mediaQuery.addEventListener("change", handleChange);
-
-    // Additional mutation observer to detect class changes if using theme toggling
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (
-          mutation.attributeName === "class" &&
-          (mutation.target === document.documentElement || mutation.target === document.body)
-        ) {
-          const isDark = document.documentElement.classList.contains("dark") || 
-                        document.body.classList.contains("dark");
-          setIsDarkMode(isDark);
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, { attributes: true });
-    observer.observe(document.body, { attributes: true });
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-      observer.disconnect();
-    };
-  }, []);
-
-  return isDarkMode;
-}
-
-// Convert hex color to RGB array
-function hexToRgb(hex) {
-  hex = hex.replace("#", "");
-
-  if (hex.length === 3) {
-    hex = hex
-      .split("")
-      .map((char) => char + char)
-      .join("");
-  }
-
-  const hexInt = parseInt(hex, 16);
-  const red = (hexInt >> 16) & 255;
-  const green = (hexInt >> 8) & 255;
-  const blue = hexInt & 255;
-  return [red, green, blue];
-}
-
 /**
  * Particles Component
  * 
@@ -113,8 +44,7 @@ function hexToRgb(hex) {
  * @param {number} [props.ease=50] - Ease factor for particle movement
  * @param {number} [props.size=0.4] - Base size of particles
  * @param {boolean} [props.refresh=false] - Flag to refresh/redraw particles
- * @param {string} [props.lightModeColor="#000000"] - Particle color in hex for light mode
- * @param {string} [props.darkModeColor="#ffffff"] - Particle color in hex for dark mode
+ * @param {boolean} [props.darkMode=false] - Dark mode state
  * @param {number} [props.vx=0] - Velocity X component
  * @param {number} [props.vy=0] - Velocity Y component
  */
@@ -125,8 +55,7 @@ export default function Particles({
   ease = 50,
   size = 0.4,
   refresh = false,
-  lightModeColor = "#000000", // Black particles for light mode
-  darkModeColor = "#ffffff", // White particles for dark mode
+  darkMode = false,
   vx = 0,
   vy = 0,
   ...props
@@ -136,24 +65,25 @@ export default function Particles({
   const context = useRef(null);
   const circles = useRef([]);
   const mousePosition = useMousePosition();
-  const isDarkMode = useThemeDetection();
   const mouse = useRef({ x: 0, y: 0 });
   const canvasSize = useRef({ w: 0, h: 0 });
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1;
   const rafID = useRef(null);
   const resizeTimeout = useRef(null);
-  const currentColor = useRef(isDarkMode ? darkModeColor : lightModeColor);
+  const lightModeColor = "#000000"; // Black particles for light mode
+  const darkModeColor = "#ffffff"; // White particles for dark mode
+  const currentColor = useRef(darkMode ? darkModeColor : lightModeColor);
 
   useEffect(() => {
     // Update color when theme changes
-    currentColor.current = isDarkMode ? darkModeColor : lightModeColor;
+    currentColor.current = darkMode ? darkModeColor : lightModeColor;
     
     // Redraw particles with new color if already initialized
     if (circles.current.length > 0) {
       clearContext();
       animate();
     }
-  }, [isDarkMode, darkModeColor, lightModeColor]);
+  }, [darkMode]);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -255,13 +185,13 @@ export default function Particles({
   const drawCircle = (circle, update = false) => {
     if (context.current) {
       const { x, y, translateX, translateY, size, alpha } = circle;
-      const color = isDarkMode ? darkModeColor : lightModeColor;
+      const color = darkMode ? darkModeColor : lightModeColor;
       const rgb = hexToRgb(color);
       
       context.current.translate(translateX, translateY);
       context.current.beginPath();
       context.current.arc(x, y, size, 0, 2 * Math.PI);
-      context.current.fillStyle = `rgba(${rgb.join(", ")}, ${alpha})`;
+      context.current.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
       context.current.fill();
       context.current.setTransform(dpr, 0, 0, dpr, 0, 0);
 
@@ -359,6 +289,24 @@ export default function Particles({
     rafID.current = window.requestAnimationFrame(animate);
   };
 
+  // Convert hex color to RGB array
+  function hexToRgb(hex) {
+    hex = hex.replace("#", "");
+
+    if (hex.length === 3) {
+      hex = hex
+        .split("")
+        .map((char) => char + char)
+        .join("");
+    }
+
+    const hexInt = parseInt(hex, 16);
+    const red = (hexInt >> 16) & 255;
+    const green = (hexInt >> 8) & 255;
+    const blue = hexInt & 255;
+    return [red, green, blue];
+  }
+
   return (
     <div
       className={cn("pointer-events-none fixed inset-0 -z-10", className)}
@@ -368,10 +316,11 @@ export default function Particles({
     >
       <canvas 
         ref={canvasRef} 
-        className={cn(
-          "w-full h-full",
-          isDarkMode ? "bg-black" : "bg-white"
-        )}
+        className="w-full h-full"
+        style={{ 
+          backgroundColor: darkMode ? '#000000' : '#ffffff',
+          border: 'none' 
+        }}
       />
     </div>
   );
