@@ -12,8 +12,7 @@ export default function TodoApp() {
   const [editingId, setEditingId] = useState(null);
   const [editingText, setEditingText] = useState('');
   const [filter, setFilter] = useState('all');
-  const [darkMode, setDarkMode] = useState(false);
-  // New state for due date and recurring tasks
+  const [darkMode, setDarkMode] = useState(true);
   const [newTodoDueDate, setNewTodoDueDate] = useState('');
   const [newTodoRecurring, setNewTodoRecurring] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
